@@ -1,0 +1,204 @@
+# Michael Carracino
+# Clustering Algorithm for Grad School ML class
+
+import math
+import random
+
+import numpy as np
+import pandas as pd
+
+
+#############
+# find_points_distance -- is used to find the distance between two points
+#   args:
+#       point_1 - the first point
+#       point_2 - the second point (order is irrelevant)
+#       distance_type - the type of distance calculated
+#   return - distance between the 2 points in the metric specified
+#   Notes:
+#       This assumes all points  have the same dimensions
+#############
+def find_points_distance(point_1, point_2, distance_type):
+    distance = 0
+    point_sum = 0
+    numerator_min = 0
+    denominator_max = 0
+    product = 0
+    first_square = 0
+    second_square = 0
+    if distance_type == "manhattan":
+        for i in range(len(point_1)): #iterate for the number of dimensions
+            point_sum += abs(point_1[i] - point_2[i])
+        #print("Manhattan Distance of points: " + str(distance))
+        distance = point_sum
+    elif distance_type == "euclidean":
+        for i in range(len(point_1)):
+            point_sum += (point_1[i] - point_2[i])**2
+        distance = math.sqrt(point_sum)
+        #print("Point 1: " + str(point_1) + "\nPoint 2: " + str(point_2) + "\nEuclidean Distance of points: " + str(distance))
+    elif distance_type == "jaccard":
+        for i in range(len(point_1)):
+            if point_1[i] >= point_2[i]:    # Point 1 is larger than Point 2
+                numerator_min += point_2[i]
+                denominator_max += point_1[i]
+            else:                           # Point 2 is larger than Poin 1
+                numerator_min += point_1[i]
+                denominator_max += point_2[i]
+        distance = 1 - numerator_min/denominator_max
+    elif distance_type == "cosine":
+        for i in range(len(point_1)):
+            product += point_1[i]*point_2[i]
+            first_square += point_1[i]**2
+            second_square += point_2[i]**2
+        distance = 1 - product/(math.sqrt(first_square)*math.sqrt(second_square))
+    else:
+        print("Error, no distance type")
+    return distance
+
+
+#############
+# find_centroids -- is used to find the centroids of given clusters
+#   args:
+#       cluster_array - an array of the clustered points
+#       old_centroid_array - an array of the previously used centroids
+#   return - an array of centroids based off of the current clusters
+#   Notes:
+#       If the cluster is empty, the centroid is unchanged
+#############
+def find_centroids(cluster_array, centroid_array, dimensionality):
+    #print("Beginning to find new centroids...")
+    #print(cluster_array)
+    new_centroid_array = []
+    total_cluster_count = len(centroid_array)
+    #print("Dimensionality is: " + str(dimensionality))
+    for i in range(total_cluster_count):  # For each cluster
+        cluster_center_array = []
+        current_cluster_size = len(cluster_array[i])
+        #print("There are " + str(current_cluster_size) + " points in cluster " + str(i))
+        if current_cluster_size > 0:
+            for j in range(dimensionality):    # For the number of dimensions
+                current_sum = 0
+                current_average = 0
+                for k in range(current_cluster_size):  # For the number of points in cluster i
+                    #print("\nCluster(i) = " + str(i) + "\nDimension(j) = " + str(j) + "\nPoint(k) = " + str(k))
+                    current_sum += cluster_array[i][k][j]
+                current_average = current_sum/current_cluster_size
+                #print("Sum of values in cluster is: " + str(current_sum))
+                cluster_center_array.append(current_average)
+            new_centroid_array.append(cluster_center_array)
+        else:
+            new_centroid_array.append(centroid_array[i])
+    #print("Found new centroids: " + str(new_centroid_array))
+    return new_centroid_array
+
+
+#############
+# make_random_centroids -- creates some number of points at random
+#   args:
+#       minimum - minimum value for all points
+#       maximum - maximum value for all points
+#       dimensionality - how many dimensions for the vectors
+#       number_of_centroids - the required amount of centroids
+#   return - an array of randomized centroids, the number is based off of the old c
+#   Notes:
+#
+#############
+def make_random_centroids(minimum, maximum, dimensionality, number_of_centroids):
+    centroid_array = []
+    for i in range(number_of_centroids):
+        dummy_array = []
+        for j in range(dimensionality):
+            dummy_array.append(random.randint(minimum, maximum))
+        centroid_array.append(dummy_array)
+    return centroid_array
+
+
+#############
+# find_clusters -- finds the clusters for a set of given points
+#   args:
+#       point_array
+#       centroid_array
+#       distance_type
+#   Notes:
+#       Assumes no point is distance 1000000
+#############
+def find_clusters(point_array, centroid_array, distance_type):
+    centroid_count = len(centroid_array)
+    closest_cluster = 0
+    cluster_array_numbers = []
+    cluster_list = []
+    for i in range(len(point_array)):           # For each point in the array
+        closest_point = 1000000
+        for j in range(len(centroid_array)):    # For each centroid
+            #print("Finding the distance between: " + str(point_array[i]) + ", " + str(centroid_array[j]))
+            current_distance = find_points_distance(point_array[i], centroid_array[j], distance_type)  # Find the distance between the point and the centroid
+            #print("Point: " + str(point_array[i]) + " Centroid: " + str(centroid_array[j]) + " Distance between them: " + str(current_distance))
+            if current_distance < closest_point:  # If the centroid is closer then the previous ones
+                closest_cluster = j
+                closest_point = current_distance
+        cluster_array_numbers.append(closest_cluster)
+    #print(cluster_array_numbers)
+    for k in range(centroid_count): # For each centroid
+        #print("\nCluster: " + str(k))
+        dummy_array = []
+        for m in range(len(point_array)): # Loop through all points
+            #print("Comparing cluster: " + str(k) + " to: " + str(cluster_array_numbers[m]))
+            if k == cluster_array_numbers[m]:   # If this this point is in cluster k
+                dummy_array.append(point_array[m])
+            #if len(dummy_array) > 0:
+        cluster_list.append(dummy_array)
+    #print(cluster_array_numbers)
+    #print(cluster_list)
+    return cluster_list
+
+
+def calculate_error(cluster_list, centroid_list, distance_type):
+    sum_squared_error = 0
+    for i in range(len(cluster_list)):  # For each cluster
+        if len(cluster_list[i]) >= 0:
+            for j in range(len(cluster_list[i])):   # For each point in cluster i
+                sum_squared_error += find_points_distance(cluster_list[i][j], centroid_list[i], distance_type)**2
+    return sum_squared_error
+
+def k_means_clustering(raw_data_points, initial_centroids, distance_type):
+    print("\n......Beginning K-Means with " + str(distance_type) + " distance......")
+    continue_loop = True
+    new_centroids = initial_centroids
+    count = 0
+    while continue_loop:
+        if count == 1:
+            continue_loop = False
+            print("Loop count has been achieved. Stopping after: " + str(count))
+        #print("\nFinding clusters for centroids: " + str(new_centroids))
+        new_clusters = find_clusters(raw_data_points, new_centroids, distance_type)
+        #for n in range(len(new_clusters)):
+            #print("Cluster " + str(n) + ": " + str(new_clusters[n]))
+        temp_centroids = find_centroids(new_clusters, new_centroids, len(raw_data_points[0]))
+        if new_centroids == temp_centroids:
+            #print("\n......No new centroids found. Ending K-Means with " + str(distance_type) + " distance......")
+            continue_loop = False
+        new_centroids = temp_centroids
+        SSE = calculate_error(new_clusters, new_centroids, distance_type)
+        count += 1
+        print("Count is: " + str(count))
+    print("SSE of K-means with " + str(distance_type) + " is: " + str(SSE))
+    print("......Ending K-Means with " + str(distance_type) + " distance......")
+
+
+df = pd.read_csv (r'C:\Users\............\data.csv')   #read the csv file (put 'r' before the path string to address any special characters in the path, such as '\'). Don't forget to put the file name at the end of the path + ".csv"
+df = pd.array(df, dtype=int)
+#print(df)
+raw_data = df.to_numpy()
+min_value = np.amin(raw_data)
+max_value = np.amax(raw_data)
+df_2 = pd.read_csv (r'C:\Users\............\label.csv')
+df_2 = pd.array(df_2, dtype=int)
+label_data = df_2.to_numpy()
+dimensions = len(raw_data[0])  # Finds the dimensionality of the first point in the array
+#print(dimensions)
+centroid_count = 10
+random_centroids = make_random_centroids(min_value, max_value, dimensions, centroid_count)
+
+k_means_clustering(raw_data, random_centroids, "euclidean")
+k_means_clustering(raw_data, random_centroids, "jaccard")
+k_means_clustering(raw_data, random_centroids, "cosine")
